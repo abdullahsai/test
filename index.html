@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <title>Text Logger</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 2rem auto;
+        max-width: 480px;
+        line-height: 1.5;
+      }
+
+      #entries {
+        margin-top: 1.5rem;
+        padding: 0;
+        list-style: none;
+        border-top: 1px solid #ddd;
+      }
+
+      #entries li {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        word-break: break-word;
+      }
+
+      button {
+        margin-left: 0.5rem;
+        padding: 0.5rem 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Text Logger</h1>
+    <div>
+      <label for="textInput" class="sr-only">Text entry</label>
+      <input id="textInput" type="text" placeholder="Type something" />
+      <button id="saveButton" type="button">Save</button>
+    </div>
+    <ul id="entries" aria-live="polite"></ul>
+    <script>
+      (function () {
+        var input = document.getElementById('textInput');
+        var button = document.getElementById('saveButton');
+        var list = document.getElementById('entries');
+
+        function renderEntries(entries) {
+          list.innerHTML = '';
+          entries.forEach(function (text) {
+            var item = document.createElement('li');
+            item.textContent = text;
+            list.appendChild(item);
+          });
+        }
+
+        function handleError(error) {
+          console.error('Failed to save text:', error);
+        }
+
+        var fallbackRun = {
+          withSuccessHandler: function (cb) {
+            this.successHandler = cb;
+            return this;
+          },
+          withFailureHandler: function () {
+            return this;
+          },
+          saveText: function () {
+            if (this.successHandler) {
+              this.successHandler([]);
+            }
+            return this;
+          },
+          getEntries: function () {
+            if (this.successHandler) {
+              this.successHandler([]);
+            }
+            return this;
+          },
+        };
+
+        var scriptRun =
+          typeof google !== 'undefined' && google.script && google.script.run
+            ? google.script.run
+            : fallbackRun;
+
+        if (typeof window !== 'undefined') {
+          window.__textLogger__ = {
+            renderEntries: renderEntries,
+            handleError: handleError,
+            scriptRun: scriptRun,
+            fallbackRun: fallbackRun,
+          };
+        }
+
+        button.addEventListener('click', function () {
+          var value = input.value.trim();
+          if (!value) {
+            input.focus();
+            return;
+          }
+          scriptRun
+            .withSuccessHandler(renderEntries)
+            .withFailureHandler(handleError)
+            .saveText(value);
+          input.value = '';
+          input.focus();
+        });
+
+        scriptRun
+          .withSuccessHandler(renderEntries)
+          .withFailureHandler(handleError)
+          .getEntries();
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,41 @@
+{
+  "name": "google-apps-script-text-logger",
+  "version": "1.0.0",
+  "description": "Simple Google Apps Script web app that saves text entries to Google Sheets.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --coverage"
+  },
+  "keywords": [
+    "google-apps-script",
+    "google-sheets",
+    "web-app"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "jest": "^30.2.0",
+    "jsdom": "^20.0.3"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "gs"
+    ],
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "Code.gs"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    }
+  }
+}
