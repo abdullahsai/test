@@ -25,6 +25,17 @@
         word-break: break-word;
       }
 
+      #entries li.entry--pending {
+        opacity: 0.65;
+      }
+
+      #entries li .entry__error {
+        color: #b00020;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: block;
+      }
+
       button {
         margin-left: 0.5rem;
         padding: 0.5rem 1rem;
@@ -45,38 +56,97 @@
         var button = document.getElementById('saveButton');
         var list = document.getElementById('entries');
 
+        function createEntryItem(text) {
+          var item = document.createElement('li');
+          var textSpan = document.createElement('span');
+          textSpan.className = 'entry__text';
+          textSpan.textContent = text;
+          item.appendChild(textSpan);
+          return item;
+        }
+
         function renderEntries(entries) {
           list.innerHTML = '';
           entries.forEach(function (text) {
-            var item = document.createElement('li');
-            item.textContent = text;
-            list.appendChild(item);
+            list.appendChild(createEntryItem(text));
           });
         }
 
-        function handleError(error) {
+        function appendPendingEntry(text) {
+          var item = createEntryItem(text);
+          item.classList.add('entry--pending');
+          list.appendChild(item);
+          return item;
+        }
+
+        function showSaveError(item, error) {
+          item.classList.remove('entry--pending');
+          var message = 'Failed to save, please retry.';
+          var errorNode = item.querySelector('.entry__error');
+          if (!errorNode) {
+            errorNode = document.createElement('span');
+            errorNode.className = 'entry__error';
+            item.appendChild(errorNode);
+          }
+          errorNode.textContent = message;
           console.error('Failed to save text:', error);
         }
 
+        function handleError(error) {
+          console.error('Error loading entries:', error);
+        }
+
         var fallbackRun = {
+          _entries: [],
+          _shouldFailNext: false,
+          successHandler: null,
+          failureHandler: null,
           withSuccessHandler: function (cb) {
             this.successHandler = cb;
             return this;
           },
-          withFailureHandler: function () {
+          withFailureHandler: function (cb) {
+            this.failureHandler = cb;
             return this;
           },
-          saveText: function () {
+          _triggerSuccess: function (payload) {
             if (this.successHandler) {
-              this.successHandler([]);
+              this.successHandler(payload);
             }
+          },
+          _triggerFailure: function (error) {
+            if (this.failureHandler) {
+              this.failureHandler(error);
+            }
+          },
+          saveText: function (text) {
+            var self = this;
+            setTimeout(function () {
+              if (self._shouldFailNext) {
+                self._shouldFailNext = false;
+                self._triggerFailure(new Error('Simulated save failure'));
+                return;
+              }
+              self._entries.push(text);
+              self._triggerSuccess(self._entries.slice());
+            }, 0);
             return this;
           },
           getEntries: function () {
-            if (this.successHandler) {
-              this.successHandler([]);
-            }
+            var self = this;
+            setTimeout(function () {
+              self._triggerSuccess(self._entries.slice());
+            }, 0);
             return this;
+          },
+          failNextSave: function () {
+            this._shouldFailNext = true;
+          },
+          reset: function () {
+            this._entries = [];
+            this._shouldFailNext = false;
+            this.successHandler = null;
+            this.failureHandler = null;
           },
         };
 
@@ -91,6 +161,8 @@
             handleError: handleError,
             scriptRun: scriptRun,
             fallbackRun: fallbackRun,
+            appendPendingEntry: appendPendingEntry,
+            showSaveError: showSaveError,
           };
         }
 
@@ -100,9 +172,14 @@
             input.focus();
             return;
           }
+          var pendingItem = appendPendingEntry(value);
           scriptRun
-            .withSuccessHandler(renderEntries)
-            .withFailureHandler(handleError)
+            .withSuccessHandler(function (entries) {
+              renderEntries(entries);
+            })
+            .withFailureHandler(function (error) {
+              showSaveError(pendingItem, error);
+            })
             .saveText(value);
           input.value = '';
           input.focus();
